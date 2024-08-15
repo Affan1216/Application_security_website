@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <title>Register Page</title>
+    <style>
+        form {
+            border: 3px solid #f1f1f1;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 12px 20px;
+            margin: 8px 0;
+            display: inline-block;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #04AA6D;
+            color: white;
+            padding: 14px 20px;
+            margin: 8px 0;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        button:hover {
+            opacity: 0.8;
+        }
+
+        .container {
+            padding: 5px;
+        }
+
+        span.psw {
+            float: right;
+            padding-top: 16px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0, 0, 0);
+            background-color: rgba(0, 0, 0, 0.4);
+            padding-top: 60px;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <form id="registerForm">
+        <div class="container">
+            <label for="uname"><b>Name</b></label>
+            <input id="uname" type="text" placeholder="Enter Name" name="uname" required>
+            <label for="psw"><b>Password</b></label>
+            <input id="psw" type="password" placeholder="Enter Password" name="psw" required>
+            <label for="email"><b>Email</b></label>
+            <input id="email" type="email" placeholder="Enter Email" name="email" required>
+
+            <label for="role"><b>Role</b></label>
+            <select name="role" id="role">
+                <option value="manager">Manager</option>
+                <option value="customer">customer</option>
+                <option value="admin">admin</option>
+                <option value="seller">seller</option>
+            </select>
+            <div class="g-recaptcha" data-sitekey="6LdNehwqAAAAAA-Wpm619-Rq59yVdeZ5u3s3OzU-"
+                data-callback="recaptchaCallback"></div>
+            <div id="g-recaptcha-error"></div>
+            <button type="submit">Register</button>
+        </div>
+        <div class="container" style="background-color:#f1f1f1">
+            <span class="psw"><a href="login.html">Login</a></span>
+        </div>
+    </form>
+
+    <div id="otpModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <p>Please enter the OTP sent to your email:</p>
+            <input id="otp" type="text" placeholder="Enter OTP" name="otp" required>
+            <button id="verifyOtpButton">Verify OTP</button>
+        </div>
+    </div>
+
+    <script>
+        function recaptchaCallback() {
+            document.getElementById('g-recaptcha-error').innerHTML = '';
+        }
+
+        function processForm(event) {
+            event.preventDefault();
+
+            const uname = document.getElementById("uname").value;
+            const psw = document.getElementById("psw").value;
+            const email = document.getElementById("email").value;
+            const role = document.getElementById("role").value;
+            const captchaResponse = grecaptcha.getResponse();
+
+            if (captchaResponse.length == 0) {
+                document.getElementById('g-recaptcha-error').innerHTML = '<span style="color:red;">This field is required.</span>';
+                return false;
+            }
+
+            var data = JSON.stringify({
+                "name": uname,
+                "password": psw,
+                "email": email,
+                'g-recaptcha-response': captchaResponse
+            });
+
+            var xhr = new XMLHttpRequest();
+
+            xhr.addEventListener("readystatechange", function () {
+                if (this.readyState == 4) {
+                    console.log(this.responseText);
+                    var response = JSON.parse(this.responseText);
+                    if (response.success) {
+                        alert("OTP sent to your email. Please enter the OTP to complete registration.");
+                        document.getElementById("otpModal").style.display = "block";
+
+                        document.getElementById("otpModal").dataset.uname = uname;
+                        document.getElementById("otpModal").dataset.psw = psw;
+                        document.getElementById("otpModal").dataset.email = email;
+                        document.getElementById("otpModal").dataset.role = role;
+                    } else {
+                        alert(response.message);
+                    }
+                }
+            });
+
+            xhr.open("POST", "http://localhost:5000/sendotp");
+            xhr.setRequestHeader("Content-Type", "application/json");
+
+            xhr.send(data);
+        }
+
+        const form = document.getElementById("registerForm");
+        form.addEventListener("submit", processForm);
+
+        var modal = document.getElementById("otpModal");
+        var span = document.getElementsByClassName("close")[0];
+
+        window.onclick = function (event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+
+        document.getElementById("verifyOtpButton").addEventListener("click", function () {
+            const otp = document.getElementById("otp").value;
+            const uname = modal.dataset.uname;
+            const psw = modal.dataset.psw;
+            const email = modal.dataset.email;
+            const role = modal.dataset.role;
+
+
+            var data = JSON.stringify({
+                "name": uname,
+                "password": psw,
+                "email": email,
+                "otp": otp,
+                "role": role
+            });
+
+            var xhr = new XMLHttpRequest();
+
+            xhr.addEventListener("readystatechange", function () {
+                if (this.readyState == 4) {
+                    console.log(this.responseText);
+                    var response = JSON.parse(this.responseText);
+                    alert(response.message);
+                    if (response.success) {
+                        modal.style.display = "none";
+                    }
+                }
+            });
+
+            xhr.open("POST", "http://localhost:5000/register-" + role);
+            xhr.setRequestHeader("Content-Type", "application/json");
+
+            xhr.send(data);
+        });
+    </script>
+</body>
+
+</html>
